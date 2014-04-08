@@ -1,0 +1,41 @@
+
+http://stat1001.wikimedia.org/public-datasets/enwiki/etc/nov13_creation.tsv.gz
+Page creation events (assumed first revision == creation)
+Contains user identifying info for joining to user_stats
+CREATE TABLE `nov13_creation` (
+  `rev_id` int(10) unsigned DEFAULT NULL,
+  `page_id` int(10) unsigned DEFAULT NULL,
+  `rev_comment` longblob,
+  `user_id` int(10) unsigned DEFAULT NULL,
+  `user_text` varbinary(255) DEFAULT NULL,
+  `rev_timestamp` varbinary(14) DEFAULT NULL,
+  `rev_deleted` tinyint(3) unsigned DEFAULT NULL,
+  `rev_len` int(10) unsigned DEFAULT NULL,
+  KEY `page_idx` (`page_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=binary
+
+
+
+http://stat1001.wikimedia.org/public-datasets/enwiki/etc/nov13_page_origin.tsv.gz
+Records the first namespace/title of a page (useful for finding pages that started as userspace and AFC drafts)
+Contains page_id for joining to creation
+CREATE TABLE `nov13_page_origin` (
+  `page_id` int(10) unsigned DEFAULT NULL,
+  `page_namespace` int(11) NOT NULL DEFAULT '0',
+  `page_title` varbinary(255) NOT NULL DEFAULT '',
+  `original_namespace` int(11) NOT NULL DEFAULT '0',
+  `original_title` varbinary(255) NOT NULL DEFAULT '',
+  UNIQUE KEY `page_name_title` (`page_id`,`page_namespace`,`page_title`),
+  KEY `original_namespace_title` (`original_namespace`,`original_title`)
+)
+
+
+http://stat1001.wikimedia.org/public-datasets/enwiki/etc/nov13_user_stats.tsv.gz
+Records contain registration date and creation action (if known) for users who created pages.
+Creation actions of "create" == user went through the usual registration process.  "autocreate" happens when users with a "Global account" browse to enwiki from other wiki projects.  This wasn't logged before 2008, so you'll find nulls before then. 
+CREATE TABLE `nov13_user_stats` (
+  `user_id` int(5) unsigned NOT NULL DEFAULT '0',
+  `user_name` varbinary(255) NOT NULL DEFAULT '',
+  `user_registration` varbinary(14) DEFAULT NULL,
+  `account_creation_action` varbinary(32) DEFAULT NULL,
+  UNIQUE KEY `user_idx` (`user_id`)
