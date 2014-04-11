@@ -37,3 +37,47 @@ mysql --defaults-file=~/replica.my.cnf -A -h enwiki.labsdb u4817__afcresearch -e
   KEY `first_revision_idx` (`first_revision`),
   KEY `namespace_title` (`page_namespace`,`page_title`)
   
+  optimum 732 367-2582 
+  9087834620
+  
+'query to create a reference table with reg_date + 30 days so we don''t have to look it up multiple times'
+CREATE TABLE timeadded (UNIQUE(user_id)) SELECT user_id AS user_id, user_registration AS reg_date, DATE_FORMAT(DATE_ADD(user_registration, INTERVAL 30 DAY), "%Y%m%d%H%i%S") AS thirtydays FROM nov13_user_stats
+  
+'ignoring null rows (I think there''s some documented reason why they''re there, but not checking now - they''re all totally blank'
+ 'Get what Jodi wants: for all users who have created an article within the first 2 days of registration, what happens to them/those articles?
+ Will they be lower quality, etc. So: select all page creation events (revs) after 01/01/2009 in namespaces 0 (Main), 1 (Talk), 4 (Wikipedia), 5 (Wikipedia talk)
+ that were done within 30 days of the user registering on WP. Tables needed: creation, obviously, for creation events and their metadata. User_stats, to get the 
+ creating user\'s registration date and type. Page_origin, to get the page\'s title, namespace, original namespace, and original title. Page, to get number
+of revisions and deletion proxy (last revision stamp), and if it was deleted (archived). So no mw joins needed.'
+
+CREATE TABLE fastcreations (UNIQUE(rev_id)) SELECT creation.rev_id AS rev_id, creation.page_id AS page_id, creation.rev_comment AS rev_comment, creation.user_id AS user_id, 
+creation.user_text AS username, creation.rev_timestamp AS rev_timestamp, creation.rev_len AS rev_len,
+users.user_registration AS registration_timestamp, users.account_creation_action AS creation_action, 
+page_origin.page_namespace AS namespace, page_origin.page_title AS page_title,
+page_origin.original_namespace AS orig_namespace, page_origin.original_title AS orig_title, 
+page.revisions, page.last_revision, page.archived 
+FROM nov13_creation AS creation 
+INNER JOIN nov13_user_stats AS users USING(user_id)
+INNER JOIN nov13_page_origin AS page_origin USING(page_id)
+INNER JOIN nov13_page AS page USING (page_id, page_namespace, page_title) 
+INNER JOIN timeadded USING (user_id)
+WHERE creation.rev_timestamp > 20090101000000  AND creation.rev_timestamp <= timeadded.thirtydays AND
+(page_origin.original_namespace = 0 OR page_origin.page_namespace = 0 OR page_origin.original_namespace = 1  OR page_origin.page_namespace = 1
+OR page_origin.original_namespace = 4 OR page_origin.page_namespace = 4 OR page_origin.original_namespace = 5 OR page_origin.page_namespace = 5)
+
+6463304855
+'only partial data'
+CREATE TABLE pafastcreations (UNIQUE(rev_id)) SELECT creation.rev_id AS rev_id, creation.page_id AS page_id, creation.rev_comment AS rev_comment, creation.user_id AS user_id, 
+creation.user_text AS username, creation.rev_timestamp AS rev_timestamp, creation.rev_len AS rev_len,
+users.user_registration AS registration_timestamp, users.account_creation_action AS creation_action, 
+page_origin.page_namespace AS namespace, page_origin.page_title AS page_title,
+page_origin.original_namespace AS orig_namespace, page_origin.original_title AS orig_title, 
+page.revisions, page.last_revision, page.archived 
+FROM nov13_creation AS creation 
+INNER JOIN nov13_user_stats AS users USING(user_id)
+INNER JOIN nov13_page_origin AS page_origin USING(page_id)
+INNER JOIN nov13_page AS page USING (page_id, page_namespace, page_title) 
+INNER JOIN timeadded USING (user_id)
+WHERE creation.rev_timestamp BETWEEN 20090101000000 AND 20090110000000 AND creation.rev_timestamp <= timeadded.thirtydays AND
+(page_origin.original_namespace = 0 OR page_origin.page_namespace = 0 OR page_origin.original_namespace = 1  OR page_origin.page_namespace = 1
+OR page_origin.original_namespace = 4 OR page_origin.page_namespace = 4 OR page_origin.original_namespace = 5 OR page_origin.page_namespace = 5)
